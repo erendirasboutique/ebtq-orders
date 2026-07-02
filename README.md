@@ -1,67 +1,100 @@
-# Erendira's Boutique Order Concierge — Manual Messenger Version
+# Erendira's Boutique Order Concierge — Final Version
 
-This is the fixed branded portal for creating private customer order pages and manually sending the link through Facebook Messenger.
+This is the final branded order portal version with:
 
-## What is included
+- Erendira's Boutique logo included
+- Bring Bold Nineties for headings
+- MD Nichrome for body/buttons/forms
+- Brand background `#FFF4EB`
+- Accents `#6f9940` and `#9955bb`
+- Small flower accents, no heavy gradients
+- Google admin login through Supabase
+- Customer magic links with no customer login
+- Manual Messenger workflow: copy message + copy link + open Messenger
+- No product item fields: only subtotal, shipping, discount, final total, photos, notes, address, customer info
+- Future-ready tables for payments, tracking numbers, shipping labels, addresses, and message history
+- Optional Stripe checkout route included
 
-- Erendira's Boutique logo in the UI
-- Bring Bold Nineties font for headings
-- MD Nichrome font for body text, labels, buttons, and navigation
-- Brand colors:
-  - Background: `#FFF4EB`
-  - Green accent/buttons: `#6f9940`
-  - Purple accent/buttons: `#9955bb`
-- Small flower accents
-- No heavy gradients
-- Google admin login through Supabase Auth
-- Customer does not log in
-- Private `/order/[token]` customer pages
-- New order workflow
-- Saved customer/Facebook name memory
-- Copy Messenger Message button
-- Copy Link button
-- Open Messenger button
-- No Messenger API required
+## 1. Supabase setup
 
-## Setup
+Create a new Supabase project, then run:
 
-1. Create a new Supabase project.
-2. Go to SQL Editor and run `supabase/schema.sql`.
-3. Turn on Google Auth in Supabase.
-4. Add these Vercel environment variables:
+`sql/schema.sql`
 
-```txt
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_EMAILS=yourgoogleemail@gmail.com
-NEXT_PUBLIC_SITE_URL=https://ebtq-orders.vercel.app
-```
+in **Supabase → SQL Editor**.
 
-5. Supabase Auth URL Configuration:
+## 2. Supabase Auth
+
+Enable Google:
+
+**Authentication → Providers → Google**
+
+Use the Supabase callback URL in Google Cloud:
+
+`https://YOUR-SUPABASE-PROJECT.supabase.co/auth/v1/callback`
+
+In Supabase URL Configuration:
 
 Site URL:
 
-```txt
-https://ebtq-orders.vercel.app
-```
+`https://ebtq-orders.vercel.app`
 
 Redirect URLs:
 
+`https://ebtq-orders.vercel.app/auth/callback`
+
+## 3. Vercel Environment Variables
+
+Add these:
+
 ```txt
-https://ebtq-orders.vercel.app/auth/callback
-http://localhost:3000/auth/callback
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+ADMIN_EMAILS=your_google_email@gmail.com
+NEXT_PUBLIC_SITE_URL=https://ebtq-orders.vercel.app
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 ```
 
-## Manual Messenger workflow
+Stripe keys can stay blank until you are ready for payment checkout.
 
-1. Go to `/admin/orders/new`.
-2. Enter customer name and Facebook/Messenger name.
-3. Upload product photo and enter items.
-4. Click **Save Order & Create Message**.
-5. Copy the ready-made Messenger message.
-6. Open Messenger and paste it to the customer.
+## 4. Admin routes
 
-## Important
+- `/login`
+- `/admin`
+- `/admin/orders`
+- `/admin/orders/new`
+- `/admin/customers`
+- `/admin/payments`
+- `/admin/shipping`
+- `/admin/messages`
 
-This version intentionally does **not** use the Messenger API because Meta restricted the business account from claiming apps. Manual Messenger is more reliable right now.
+## 5. Customer route
+
+Customers use only their private link:
+
+`/order/[token]`
+
+No customer login is required.
+
+## 6. Manual Messenger workflow
+
+When an order is created, the portal generates a message like:
+
+```txt
+Hi Maria! 🌸
+
+Thank you for shopping with Erendira's Boutique!
+
+Your private order page is ready.
+
+Total: $85.00
+
+View your order here:
+https://ebtq-orders.vercel.app/order/...
+
+Thank you! 💜
+```
+
+Click **Copy Message**, open Messenger, and paste it into the customer's conversation.

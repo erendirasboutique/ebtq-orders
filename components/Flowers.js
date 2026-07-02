@@ -1,1 +1,1 @@
-export default function Flowers(){return <div className="flowers" aria-hidden="true"><span>✿</span><span>✽</span><span>✿</span><span>✤</span><span>❀</span><span>✿</span></div>}
+export default function Flowers(){return <><span className="flower one">✿</span><span className="flower two">❀</span><span className="flower three">✿</span><span className="flower four">❀</span><span className="flower five">✿</span><span className="flower six">❀</span></>}

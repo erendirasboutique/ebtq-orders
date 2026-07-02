@@ -1,2 +1,2 @@
-import Link from 'next/link';import Flowers from '@/components/Flowers';
-export default function Home(){return <main className="page flowerfield"><Flowers/><div className="shell"><section className="customerHero panel"><img className="logo" src="/eb-logo.png" alt="Erendira's Boutique"/><p className="eyebrow">Private boutique order pages</p><h1 className="h1">Order Concierge</h1><p className="copy">Create pretty private order links and send them manually through Facebook Messenger.</p><br/><Link className="btn primary" href="/admin">Admin Login</Link></section></div></main>}
+import { redirect } from 'next/navigation';
+export default function Home(){redirect('/login')}

@@ -1,14 +1,2 @@
 'use client';
-
-import { getSupabaseBrowser } from '@/lib/supabaseClient';
-
-export default function SignOutButton() {
-  const supabase = getSupabaseBrowser();
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    window.location.href = '/login';
-  }
-
-  return <button className="pill" onClick={signOut}>Sign out</button>;
-}
+export default function SignOutButton(){async function out(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login'}return <button className="logout" onClick={out}>Sign out</button>}
