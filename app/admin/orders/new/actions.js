@@ -1,9 +1,32 @@
 'use server';
-import { randomUUID } from 'crypto';import { redirect } from 'next/navigation';import { requireAdmin } from '@/lib/supabaseServer';import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-function clean(v){return String(v||'').trim()} function money(v){return Math.round((Number(v||0)+Number.EPSILON)*100)/100}
-export async function createOrder(formData){const {allowed,user}=await requireAdmin();if(!user||!allowed)redirect('/login');const admin=getSupabaseAdmin();const customerName=clean(formData.get('customer_name'));const facebookName=clean(formData.get('facebook_name'));const messengerPsid=clean(formData.get('messenger_psid'));const itemName=clean(formData.get('item_name'));const notes=clean(formData.get('notes'));const total=money(formData.get('total'));const token=randomUUID().replaceAll('-','');let photoUrl=clean(formData.get('photo_url'));
- let customerId=null;if(customerName||facebookName||messengerPsid){const {data:existing}=await admin.from('customers').select('*').or(`facebook_name.eq.${facebookName || '___'},messenger_psid.eq.${messengerPsid || '___'}`).limit(1).maybeSingle();if(existing){customerId=existing.id;await admin.from('customers').update({customer_name:customerName||existing.customer_name,facebook_name:facebookName||existing.facebook_name,messenger_psid:messengerPsid||existing.messenger_psid}).eq('id',customerId)}else{const {data:c,error}=await admin.from('customers').insert({customer_name:customerName,facebook_name:facebookName,messenger_psid:messengerPsid}).select().single();if(error)throw error;customerId=c.id}}
- const file=formData.get('photo');if(file&&file.size>0){const ext=(file.name?.split('.').pop()||'jpg').toLowerCase();const path=`orders/${token}.${ext}`;const buf=Buffer.from(await file.arrayBuffer());const {error:upErr}=await admin.storage.from('order-photos').upload(path,buf,{contentType:file.type||'image/jpeg',upsert:true});if(upErr)throw upErr;const {data:pub}=admin.storage.from('order-photos').getPublicUrl(path);photoUrl=pub.publicUrl}
- const {data:order,error}=await admin.from('orders').insert({customer_id:customerId,customer_name:customerName,facebook_name:facebookName,messenger_psid:messengerPsid,item_name:itemName,notes,total,photo_url:photoUrl,token,status:'pending_payment',created_by:user.email}).select().single();if(error)throw error;
- if(messengerPsid){const site=process.env.NEXT_PUBLIC_SITE_URL||'';try{await fetch(`${site}/api/messenger/send-order`,{method:'POST',headers:{'Content-Type':'application/json','x-internal-key':process.env.SUPABASE_SERVICE_ROLE_KEY||''},body:JSON.stringify({orderId:order.id})})}catch(e){}}
- redirect(`/admin/orders?created=${order.id}`)}
+import { redirect } from 'next/navigation';import { randomUUID } from 'crypto';import { requireAdmin } from '@/lib/supabaseServer';
+function money(n){return Math.round((Number(n||0)+Number.EPSILON)*100)/100}
+function slug(){return randomUUID().replaceAll('-','')}
+export async function createOrder(formData){
+ const {allowed,user,supabase}=await requireAdmin();if(!user)redirect('/login');if(!allowed)redirect('/login?error=not_allowed');
+ const customer_name=String(formData.get('customer_name')||'').trim();
+ const facebook_name=String(formData.get('facebook_name')||'').trim();
+ const product_title=String(formData.get('product_title')||'').trim();
+ const notes=String(formData.get('notes')||'').trim();
+ const item1=String(formData.get('item1')||'').trim();const item1_price=money(formData.get('item1_price'));
+ const item2=String(formData.get('item2')||'').trim();const item2_price=money(formData.get('item2_price'));
+ const shipping=money(formData.get('shipping'));const discount=money(formData.get('discount'));
+ const total=money(item1_price+item2_price+shipping-discount);
+ const token=slug();let photo_url='';
+ const photo=formData.get('photo');
+ if(photo && typeof photo==='object' && photo.size>0){
+   const ext=(photo.name?.split('.').pop()||'jpg').toLowerCase();const path=`orders/${token}.${ext}`;
+   const {error:uploadError}=await supabase.storage.from('order-photos').upload(path,photo,{upsert:true,contentType:photo.type||'image/jpeg'});
+   if(!uploadError){const {data}=supabase.storage.from('order-photos').getPublicUrl(path);photo_url=data?.publicUrl||''}
+ }
+ let customer_id=null;
+ if(customer_name || facebook_name){
+   const {data:existing}=await supabase.from('customers').select('*').or(`customer_name.eq.${customer_name||'__none__'},facebook_name.eq.${facebook_name||'__none__'}`).limit(1).maybeSingle();
+   if(existing?.id){customer_id=existing.id;await supabase.from('customers').update({customer_name:customer_name||existing.customer_name,facebook_name:facebook_name||existing.facebook_name}).eq('id',existing.id)}
+   else{const {data:newCustomer}=await supabase.from('customers').insert({customer_name,facebook_name}).select('id').single();customer_id=newCustomer?.id||null}
+ }
+ const items=[item1?{name:item1,price:item1_price,quantity:1}:null,item2?{name:item2,price:item2_price,quantity:1}:null].filter(Boolean);
+ const {error}=await supabase.from('orders').insert({customer_id,customer_name,facebook_name,product_title,notes,items,shipping,discount,total,status:'pending_payment',token,photo_url});
+ if(error)redirect('/admin/orders/new?error=save_failed');
+ redirect(`/admin/orders/created?token=${token}`);
+}
