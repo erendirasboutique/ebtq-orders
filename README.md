@@ -1,42 +1,72 @@
-# Erendira's Boutique — Premium Order Portal
+# Erendira's Boutique Order Concierge
 
-A branded Next.js + Vercel + Supabase portal for creating customer orders, uploading product photos, sending private customer order links, and preparing Messenger/Stripe integrations.
+This is the fully rebranded order portal version with:
 
-## What is included
+- Uploaded Erendira's Boutique logo included in `/public/eb-logo.png`
+- Bring Bold Nineties headings from `/public/fonts/bringbold_nineties_regular.otf`
+- MD Nichrome body/buttons from `/public/fonts/MDNichrome-Bold.otf`
+- Brand colors: `#FFF4EB`, `#6f9940`, `#9955bb`
+- Small flower accents, no heavy gradients, no billing-portal style layout
+- Google admin login through Supabase Auth
+- Customer pages with private magic links, no customer login
+- Facebook/Messenger name field on orders
+- Messenger PSID support for sending the magic link to Messenger
+- Messenger webhook route to capture customer PSIDs when they message your Page
+- Stripe Checkout starter route
 
-- Premium Erendira's Boutique styling: soft pink/cream/green palette, glass cards, floral accents, boutique dashboard UI.
-- Google-only admin login through Supabase Auth.
-- Admin dashboard with order stats, recent orders, and quick actions.
-- Create order page with customer info, order items, photo upload, status, notes, and private token links.
-- Orders page with search, status badges, private link copy button, and Messenger send button.
-- Customer order page with no login required, photo, total, timeline, pay button, and tracking area.
-- Supabase SQL setup for profiles, customers, orders, order_items, RLS policies, and storage bucket.
-- API routes for Messenger and Stripe checkout starters.
+## Important Messenger reality
+
+Meta does **not** let you message someone by only typing their Facebook name. The Messenger API requires a Page-scoped ID, called a PSID. This portal saves the customer's Facebook/Messenger display name for your search, but to send the magic link automatically, the customer must have messaged your Facebook Page first so the webhook can save their PSID.
+
+Flow:
+
+1. Customer messages your Facebook Page.
+2. `/api/messenger/webhook` receives their PSID and saves it to Supabase.
+3. You create an order with their Facebook/Messenger name and PSID if known.
+4. The app creates a private `/order/[token]` link.
+5. If PSID exists, `/api/messenger/send-order` sends the magic link to Messenger.
 
 ## Setup
 
-1. Upload this project to GitHub.
-2. Deploy to Vercel.
-3. Create a Supabase project.
-4. In Supabase SQL Editor, run `sql/setup.sql`.
-5. In Supabase Auth > Providers, enable Google.
-6. Add your deployed URL to Supabase Auth redirect URLs:
-   - `https://your-domain.vercel.app/auth/callback`
-   - `http://localhost:3000/auth/callback`
-7. Add environment variables in Vercel from `.env.example`.
-8. Add your admin Gmail address to `ADMIN_EMAILS`.
-9. Put your real logo as `public/logo.png` if you have one. The app already has a boutique placeholder logo.
+1. Create a new Supabase project.
+2. Run `supabase/schema.sql` in the Supabase SQL Editor.
+3. Enable Google provider in Supabase Auth.
+4. Add your Vercel URL to Supabase Auth redirect URLs:
+   - `https://YOUR-SITE.vercel.app/auth/callback`
+5. Add environment variables in Vercel:
 
-## Build fix included
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+ADMIN_EMAILS=you@gmail.com
+NEXT_PUBLIC_SITE_URL=https://your-vercel-url.vercel.app
+META_PAGE_ACCESS_TOKEN=
+META_VERIFY_TOKEN=erendiras_verify_token
+META_PAGE_ID=
+STRIPE_SECRET_KEY=
+STRIPE_SUCCESS_URL=
+STRIPE_CANCEL_URL=
+```
 
-This version uses `@supabase/ssr` instead of the deprecated `@supabase/auth-helpers-nextjs`, so it works with current Next.js/Vercel builds.
+## Meta Messenger webhook
 
-## Important
+Webhook callback URL:
 
-Customers do not log in. They use the private `/order/[token]` link generated for each order.
+```txt
+https://YOUR-SITE.vercel.app/api/messenger/webhook
+```
 
-Messenger sending requires Meta approval/page setup. Until then, the button will still create the order and show/copy the private link.
+Verify token must match `META_VERIFY_TOKEN`.
 
-## Fonts
+Subscribe to Page messaging events.
 
-Do not upload paid font files publicly unless your license allows it. If you own the font files, place them in `public/fonts/` and update `app/globals.css` font-face names.
+## Pages
+
+- `/` public landing page
+- `/login` admin login
+- `/admin` dashboard
+- `/admin/orders` orders list
+- `/admin/orders/new` create order
+- `/admin/customers` Messenger customers
+- `/order/[token]` customer magic link

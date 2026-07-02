@@ -1,16 +1,2 @@
 import Link from 'next/link';
-
-export default function BrandHeader({ admin = false }) {
-  return (
-    <header className="topbar">
-      <Link href={admin ? '/admin' : '/'} className="brand">
-        <div className="brandMark"><img src="/logo.svg" alt="Erendira's Boutique" /></div>
-        <div>
-          <h1>Erendira&apos;s Boutique</h1>
-          <p>Private Order Studio</p>
-        </div>
-      </Link>
-      {admin && <nav className="nav"><Link className="pill" href="/admin">Studio</Link><Link className="pill" href="/admin/orders">Order Desk</Link><Link className="pill" href="/admin/orders/new">New Ticket</Link></nav>}
-    </header>
-  );
-}
+export default function BrandHeader(){return <header className="brandbar"><Link className="brandlock" href="/admin"><img className="logo" src="/eb-logo.png" alt="Erendira's Boutique"/></Link><nav className="nav"><Link href="/admin">Dashboard</Link><Link href="/admin/orders">Orders</Link><Link href="/admin/orders/new" className="primary">+ New Order</Link><Link href="/admin/customers">Customers</Link><form action="/api/auth/logout" method="post"><button>Sign out</button></form></nav></header>}

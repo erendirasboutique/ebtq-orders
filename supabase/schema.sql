@@ -1,49 +1,46 @@
-create table if not exists public.admins (
-  id uuid primary key references auth.users(id) on delete cascade,
-  email text unique not null,
-  role text not null default 'admin',
-  language text default 'en',
-  active boolean default true,
-  created_at timestamptz default now()
-);
+create extension if not exists pgcrypto;
 
-create table if not exists public.payments (
-  id uuid default gen_random_uuid() primary key,
-  payment_source text default 'stripe',
-
-  stripe_session_id text unique,
-  stripe_payment_intent text,
-  stripe_customer_id text,
-  payment_link text,
-
-  clover_payment_id text unique,
-  clover_order_id text,
-  clover_merchant_id text,
-  clover_tender text,
-
+create table if not exists public.customers (
+  id uuid primary key default gen_random_uuid(),
   customer_name text,
-  customer_email text,
-  customer_phone text,
-
-  amount_total numeric default 0,
-  currency text default 'usd',
-  payment_status text,
-  refund_status text default 'none',
-  payment_method text,
-  payment_method_brand text,
-  payment_method_last4 text,
-
-  billing_address jsonb,
-  shipping_address jsonb,
-  description text,
-  receipt_url text,
-  admin_notes text,
-  raw jsonb,
+  facebook_name text,
+  messenger_psid text unique,
+  phone text,
+  email text,
+  last_message text,
+  last_seen_at timestamptz,
   created_at timestamptz default now()
 );
 
-alter table public.admins enable row level security;
-alter table public.payments enable row level security;
+create table if not exists public.orders (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references public.customers(id) on delete set null,
+  customer_name text,
+  facebook_name text,
+  messenger_psid text,
+  item_name text,
+  notes text,
+  total numeric(10,2) default 0,
+  status text default 'pending_payment',
+  photo_url text,
+  token text unique not null,
+  magic_link text,
+  stripe_payment_url text,
+  tracking_url text,
+  created_by text,
+  last_messenger_sent_at timestamptz,
+  created_at timestamptz default now()
+);
 
-create unique index if not exists payments_stripe_session_id_key on public.payments (stripe_session_id);
-create unique index if not exists payments_clover_payment_id_key on public.payments (clover_payment_id);
+alter table public.customers enable row level security;
+alter table public.orders enable row level security;
+
+create policy "admins read customers" on public.customers for select using (auth.role() = 'authenticated');
+create policy "admins read orders" on public.orders for select using (auth.role() = 'authenticated');
+create policy "public can view private token orders" on public.orders for select using (true);
+
+insert into storage.buckets (id, name, public) values ('order-photos','order-photos',true)
+on conflict (id) do nothing;
+
+create policy "public read order photos" on storage.objects for select using (bucket_id='order-photos');
+create policy "admins upload order photos" on storage.objects for insert with check (bucket_id='order-photos');

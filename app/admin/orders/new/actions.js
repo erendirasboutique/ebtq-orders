@@ -1,41 +1,9 @@
 'use server';
-import { redirect } from 'next/navigation';
-import { randomUUID } from 'crypto';
-import { requireAdmin } from '@/lib/supabaseServer';
-
-function money(n){ return Math.round((Number(n||0)+Number.EPSILON)*100)/100; }
-
-export async function createOrder(formData){
- const {supabase, allowed}=await requireAdmin(); if(!allowed) throw new Error('Not authorized');
- const name=String(formData.get('customerName')||'').trim();
- if(!name) throw new Error('Customer name is required');
- const email=String(formData.get('email')||'').trim()||null;
- const phone=String(formData.get('phone')||'').trim()||null;
- const facebook_psid=String(formData.get('facebookPsid')||'').trim()||null;
- const notes=String(formData.get('notes')||'').trim()||null;
- const status=String(formData.get('status')||'draft');
- const tracking_number=String(formData.get('trackingNumber')||'').trim()||null;
- const itemNames=formData.getAll('itemName').map(x=>String(x).trim());
- const itemPrices=formData.getAll('itemPrice').map(x=>money(x));
- const itemQtys=formData.getAll('itemQty').map(x=>Number(x||1));
- const items=itemNames.map((n,i)=>({name:n, price:itemPrices[i]||0, quantity:itemQtys[i]||1})).filter(i=>i.name);
- const manual=money(formData.get('manualTotal'));
- const total=manual>0?manual:money(items.reduce((s,i)=>s+(i.price*i.quantity),0));
- const private_token=randomUUID().replaceAll('-','');
- const {data:customer,error:cErr}=await supabase.from('customers').insert({name,email,phone,facebook_psid}).select().single();
- if(cErr) throw new Error(cErr.message);
- let photo_url=null;
- const file=formData.get('photo');
- if(file && file.size){
-   const ext=(file.name?.split('.').pop()||'jpg').toLowerCase();
-   const path=`orders/${private_token}.${ext}`;
-   const {error:uErr}=await supabase.storage.from('order-photos').upload(path,file,{upsert:true,contentType:file.type||'image/jpeg'});
-   if(uErr) throw new Error(uErr.message);
-   const {data:pub}=supabase.storage.from('order-photos').getPublicUrl(path);
-   photo_url=pub.publicUrl;
- }
- const {data:order,error:oErr}=await supabase.from('orders').insert({customer_id:customer.id,total,status,notes,tracking_number,photo_url,private_token}).select().single();
- if(oErr) throw new Error(oErr.message);
- if(items.length){ const rows=items.map(i=>({...i,order_id:order.id})); const {error:iErr}=await supabase.from('order_items').insert(rows); if(iErr) throw new Error(iErr.message); }
- redirect(`/order/${private_token}`);
-}
+import { randomUUID } from 'crypto';import { redirect } from 'next/navigation';import { requireAdmin } from '@/lib/supabaseServer';import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+function clean(v){return String(v||'').trim()} function money(v){return Math.round((Number(v||0)+Number.EPSILON)*100)/100}
+export async function createOrder(formData){const {allowed,user}=await requireAdmin();if(!user||!allowed)redirect('/login');const admin=getSupabaseAdmin();const customerName=clean(formData.get('customer_name'));const facebookName=clean(formData.get('facebook_name'));const messengerPsid=clean(formData.get('messenger_psid'));const itemName=clean(formData.get('item_name'));const notes=clean(formData.get('notes'));const total=money(formData.get('total'));const token=randomUUID().replaceAll('-','');let photoUrl=clean(formData.get('photo_url'));
+ let customerId=null;if(customerName||facebookName||messengerPsid){const {data:existing}=await admin.from('customers').select('*').or(`facebook_name.eq.${facebookName || '___'},messenger_psid.eq.${messengerPsid || '___'}`).limit(1).maybeSingle();if(existing){customerId=existing.id;await admin.from('customers').update({customer_name:customerName||existing.customer_name,facebook_name:facebookName||existing.facebook_name,messenger_psid:messengerPsid||existing.messenger_psid}).eq('id',customerId)}else{const {data:c,error}=await admin.from('customers').insert({customer_name:customerName,facebook_name:facebookName,messenger_psid:messengerPsid}).select().single();if(error)throw error;customerId=c.id}}
+ const file=formData.get('photo');if(file&&file.size>0){const ext=(file.name?.split('.').pop()||'jpg').toLowerCase();const path=`orders/${token}.${ext}`;const buf=Buffer.from(await file.arrayBuffer());const {error:upErr}=await admin.storage.from('order-photos').upload(path,buf,{contentType:file.type||'image/jpeg',upsert:true});if(upErr)throw upErr;const {data:pub}=admin.storage.from('order-photos').getPublicUrl(path);photoUrl=pub.publicUrl}
+ const {data:order,error}=await admin.from('orders').insert({customer_id:customerId,customer_name:customerName,facebook_name:facebookName,messenger_psid:messengerPsid,item_name:itemName,notes,total,photo_url:photoUrl,token,status:'pending_payment',created_by:user.email}).select().single();if(error)throw error;
+ if(messengerPsid){const site=process.env.NEXT_PUBLIC_SITE_URL||'';try{await fetch(`${site}/api/messenger/send-order`,{method:'POST',headers:{'Content-Type':'application/json','x-internal-key':process.env.SUPABASE_SERVICE_ROLE_KEY||''},body:JSON.stringify({orderId:order.id})})}catch(e){}}
+ redirect(`/admin/orders?created=${order.id}`)}

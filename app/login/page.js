@@ -1,8 +1,4 @@
 'use client';
-import BrandHeader from '@/components/BrandHeader';
-import { getSupabaseBrowser } from '@/lib/supabaseClient';
-export default function Login(){
- const supabase=getSupabaseBrowser();
- async function login(){ await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:`${location.origin}/auth/callback`}}); }
- return <main className="page"><div className="shell"><BrandHeader/><div className="grid two"><section className="heroOrder"><div className="eyebrow">Admin only</div><h2>Enter the Order Studio.</h2><p>This is separate from billing. It is for customer order tickets, private links, product photos, and Messenger-ready updates.</p><button onClick={login} className="btn primary">Continue with Google</button></section><section className="card"><h3 className="sectionTitle">No customer login</h3><p>Customers open their unique private link only. Admin access is limited to emails inside <b>ADMIN_EMAILS</b>.</p><div className="notice">Use your approved Google account to continue.</div></section></div></div></main>
-}
+import { getSupabaseBrowser } from '@/lib/supabaseBrowser';import Flowers from '@/components/Flowers';
+export const dynamic='force-dynamic';
+export default function Login(){async function login(){const supabase=getSupabaseBrowser();await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:`${window.location.origin}/auth/callback`}})}return <main className="center flowerfield"><Flowers/><section className="login panel"><img className="logo" src="/eb-logo.png" alt="Erendira's Boutique"/><p className="eyebrow">Admin Access</p><h1 className="h1">Order Concierge</h1><p className="copy">Sign in with your approved Google account to manage orders and Messenger magic links.</p><br/><button className="btn primary" onClick={login}>Continue with Google</button></section></main>}
