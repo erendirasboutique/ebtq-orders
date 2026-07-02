@@ -1,9 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: "Erendira's Boutique Billing",
-  description: "Customer and admin billing portal",
-  icons: { icon: '/favicon.png' },
+  title: "Erendira's Boutique Order Portal",
+  description: 'Boutique order management and private customer order links.'
 };
 
 export default function RootLayout({ children }) {

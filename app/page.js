@@ -1,29 +1,3 @@
-import { cookies } from 'next/headers';
-import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import CustomerPortal from '@/components/CustomerPortal';
-
-export const dynamic = 'force-dynamic';
-
-export default async function HomePage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('sb-access-token')?.value;
-  let user = null;
-  let payments = [];
-
-  if (token) {
-    const supabase = getSupabaseAdmin();
-    const { data } = await supabase.auth.getUser(token);
-    user = data?.user || null;
-
-    if (user?.email) {
-      const { data: rows = [] } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('customer_email', user.email.toLowerCase())
-        .order('created_at', { ascending: false });
-      payments = rows || [];
-    }
-  }
-
-  return <CustomerPortal initialUser={user} initialPayments={payments} />;
-}
+import Link from 'next/link';
+import BrandHeader from '@/components/BrandHeader';
+export default function Home(){return <main className="page"><div className="shell"><BrandHeader/><section className="heroOrder"><div className="eyebrow">Customer order links</div><h2>A private boutique order experience.</h2><p>This portal is only for customer order previews, product photos, totals, status updates, and private links. Customers never need to create an account.</p><div className="actions"><Link className="btn primary" href="/login">Admin Login</Link></div></section><p className="footer">Erendira&apos;s Boutique • Envios cada Sábado</p></div></main>}

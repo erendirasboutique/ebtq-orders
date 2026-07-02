@@ -1,16 +1,16 @@
 {
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
-  },
+  "name": "erendiras-order-portal-premium",
+  "version": "1.0.1",
+  "private": true,
+  "scripts": {"dev":"next dev","build":"next build","start":"next start","lint":"next lint"},
   "dependencies": {
+    "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "stripe": "latest",
-    "@supabase/ssr": "latest"
+    "stripe": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {"eslint":"latest","eslint-config-next":"latest"}
 }

@@ -1,60 +1,22 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabaseServer';
-import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-
-const ALLOWED_ADMINS = [
-  'hello@shoperendirasboutique.com',
-];
+import { getSupabaseRoute, adminEmails } from '@/lib/supabaseServer';
 
 export async function GET(req) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') || '/';
 
-  if (!code) {
-    return NextResponse.redirect(
-      new URL(next.startsWith('/admin') ? '/admin/login?error=missing_code' : '/', url.origin)
-    );
-  }
+  if (code) {
+    const supabase = await getSupabaseRoute();
+    await supabase.auth.exchangeCodeForSession(code);
+    const { data: { user } } = await supabase.auth.getUser();
+    const email = user?.email?.toLowerCase();
 
-  const supabase = await getSupabaseServer();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error || !data?.user?.email) {
-    const message = encodeURIComponent(error?.message || 'No user returned.');
-    return NextResponse.redirect(
-      new URL(next.startsWith('/admin') ? `/admin/login?error=session_failed&details=${message}` : '/', url.origin)
-    );
-  }
-
-  if (next.startsWith('/admin')) {
-    const email = data.user.email.toLowerCase();
-
-    if (!ALLOWED_ADMINS.includes(email)) {
-      return NextResponse.redirect(
-        new URL(`/admin/login?error=unauthorized&email=${encodeURIComponent(email)}`, url.origin)
-      );
+    if (email && adminEmails().includes(email)) {
+      return NextResponse.redirect(new URL('/admin', url.origin));
     }
 
-    const adminSupabase = getSupabaseAdmin();
-
-    const { error: upsertError } = await adminSupabase.from('admins').upsert(
-      {
-        id: data.user.id,
-        email,
-        role: 'owner',
-        language: 'en',
-        active: true,
-      },
-      { onConflict: 'email' }
-    );
-
-    if (upsertError) {
-      return NextResponse.redirect(
-        new URL(`/admin/login?error=admin_upsert_failed&details=${encodeURIComponent(upsertError.message)}`, url.origin)
-      );
-    }
+    await supabase.auth.signOut();
   }
 
-  return NextResponse.redirect(new URL(next, url.origin));
+  return NextResponse.redirect(new URL('/login?error=not-authorized', url.origin));
 }
