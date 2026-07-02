@@ -1,0 +1,3 @@
+import Link from 'next/link';
+import BrandHeader from '@/components/BrandHeader';
+export default function Home(){return <main className="page"><span className="flower one"/><span className="flower two"/><div className="shell"><BrandHeader/><section className="hero"><h2>Your boutique orders, beautifully organized.</h2><p>Create orders, upload photos, send private customer links, collect payments, and keep every Erendira&apos;s Boutique order in one polished portal.</p><div className="actions"><Link className="btn primary" href="/login">Admin Login</Link></div></section><p className="footer">Customers open their private order link only. No account needed.</p></div></main>}
