@@ -1,3 +1,122 @@
-import Link from 'next/link';import { redirect } from 'next/navigation';import BrandHeader from '@/components/BrandHeader';import Flowers from '@/components/Flowers';import { requireAdmin } from '@/lib/supabaseServer';
-export const dynamic='force-dynamic';
-export default async function Admin(){const {allowed,user,supabase}=await requireAdmin();if(!user)redirect('/login');if(!allowed)redirect('/login?error=not_allowed');const {data:orders=[]}=await supabase.from('orders').select('id,customer_name,facebook_name,total,status,created_at,token,photo_url').order('created_at',{ascending:false}).limit(6);const {count:pending}=await supabase.from('orders').select('*',{count:'exact',head:true}).in('status',['draft','pending_payment']);const {count:customers}=await supabase.from('customers').select('*',{count:'exact',head:true});return <main className="page flowerfield"><Flowers/><div className="shell"><BrandHeader/><section className="panel"><p className="eyebrow">Welcome back</p><h1 className="h1">Order Studio</h1><p className="copy">Create an order, choose a customer by Facebook/Messenger name, and send their private magic link.</p><br/><div className="grid"><div className="stat"><b>{orders.length}</b><p>Recent orders</p></div><div className="stat"><b>{pending||0}</b><p>Need attention</p></div><div className="stat"><b>{customers||0}</b><p>Customers</p></div></div><br/><Link className="btn primary" href="/admin/orders/new">Create New Order</Link></section><br/><section className="card"><h2 className="h2">Recent Orders</h2>{orders.map(o=><article className="ticket" key={o.id}><div className="thumb">{o.photo_url?<img className="thumb" src={o.photo_url} alt=""/>:'Photo'}</div><div><b>{o.customer_name||o.facebook_name||'Customer'}</b><p className="copy">Facebook: {o.facebook_name||'Not saved yet'}</p><span className="badge">{o.status}</span></div><div className="total">${Number(o.total||0).toFixed(2)}</div></article>)}{!orders.length&&<p className="copy">No orders yet.</p>}</section></div></main>}
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import BrandHeader from '@/components/BrandHeader';
+import Flowers from '@/components/Flowers';
+import { requireAdmin } from '@/lib/supabaseServer';
+
+export const dynamic = 'force-dynamic';
+
+export default async function Admin() {
+  const { allowed, user, supabase } = await requireAdmin();
+
+  if (!user) redirect('/login');
+  if (!allowed) redirect('/login?error=not_allowed');
+
+  // Recent Orders
+  const { data: ordersData, error: ordersError } = await supabase
+    .from('orders')
+    .select(
+      'id, customer_name, facebook_name, total, status, created_at, token, photo_url'
+    )
+    .order('created_at', { ascending: false })
+    .limit(6);
+
+  const orders = Array.isArray(ordersData) ? ordersData : [];
+
+  // Pending Count
+  const { count: pendingCount } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['draft', 'pending_payment']);
+
+  // Customer Count
+  const { count: customerCount } = await supabase
+    .from('customers')
+    .select('*', { count: 'exact', head: true });
+
+  return (
+    <main className="page flowerfield">
+      <Flowers />
+
+      <div className="shell">
+        <BrandHeader />
+
+        <section className="panel">
+          <p className="eyebrow">Welcome back</p>
+
+          <h1 className="h1">Order Studio</h1>
+
+          <p className="copy">
+            Create an order, choose a customer by Facebook/Messenger name, and
+            send their private magic link.
+          </p>
+
+          <br />
+
+          <div className="grid">
+            <div className="stat">
+              <b>{orders.length}</b>
+              <p>Recent Orders</p>
+            </div>
+
+            <div className="stat">
+              <b>{pendingCount ?? 0}</b>
+              <p>Need Attention</p>
+            </div>
+
+            <div className="stat">
+              <b>{customerCount ?? 0}</b>
+              <p>Customers</p>
+            </div>
+          </div>
+
+          <br />
+
+          <Link className="btn primary" href="/admin/orders/new">
+            Create New Order
+          </Link>
+        </section>
+
+        <br />
+
+        <section className="card">
+          <h2 className="h2">Recent Orders</h2>
+
+          {orders.length === 0 ? (
+            <p className="copy">No orders yet.</p>
+          ) : (
+            orders.map((o) => (
+              <article className="ticket" key={o.id}>
+                <div className="thumb">
+                  {o.photo_url ? (
+                    <img
+                      className="thumb"
+                      src={o.photo_url}
+                      alt={o.customer_name || 'Order'}
+                    />
+                  ) : (
+                    'Photo'
+                  )}
+                </div>
+
+                <div>
+                  <b>{o.customer_name || o.facebook_name || 'Customer'}</b>
+
+                  <p className="copy">
+                    Facebook: {o.facebook_name || 'Not saved yet'}
+                  </p>
+
+                  <span className="badge">{o.status}</span>
+                </div>
+
+                <div className="total">
+                  ${Number(o.total ?? 0).toFixed(2)}
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
