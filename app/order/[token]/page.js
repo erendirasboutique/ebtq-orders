@@ -6,27 +6,26 @@ import { getSupabaseServer } from '@/lib/supabaseServer';
 export const dynamic = 'force-dynamic';
 
 export default async function CustomerOrder({ params }) {
+  const { token } = await params;
+
   const supabase = await getSupabaseServer();
-  const token = params.token;
 
   const { data: order } = await supabase
     .from('orders')
     .select('*')
     .eq('token', token)
-    .single();
+    .maybeSingle();
 
   if (!order) notFound();
 
   return (
     <main className="page flowerfield">
       <Flowers />
-
       <div className="shell">
         <BrandHeader />
 
         <section className="panel">
           <p className="eyebrow">Your private order page</p>
-
           <h1 className="h1">
             Hi {order.customer_name || order.facebook_name || 'beautiful'} 🌸
           </h1>
@@ -36,8 +35,6 @@ export default async function CustomerOrder({ params }) {
             your order here anytime.
           </p>
 
-          <br />
-
           {order.photo_url && (
             <img
               src={order.photo_url}
@@ -46,7 +43,7 @@ export default async function CustomerOrder({ params }) {
                 width: '100%',
                 maxWidth: 420,
                 borderRadius: 24,
-                display: 'block',
+                marginTop: 20,
                 marginBottom: 20,
               }}
             />
@@ -55,9 +52,15 @@ export default async function CustomerOrder({ params }) {
           <div className="card">
             <h2 className="h2">Order Summary</h2>
 
-            <p className="copy">Subtotal: ${Number(order.subtotal || 0).toFixed(2)}</p>
-            <p className="copy">Shipping: ${Number(order.shipping || 0).toFixed(2)}</p>
-            <p className="copy">Discount: ${Number(order.discount || 0).toFixed(2)}</p>
+            <p className="copy">
+              Subtotal: ${Number(order.subtotal || 0).toFixed(2)}
+            </p>
+            <p className="copy">
+              Shipping: ${Number(order.shipping || 0).toFixed(2)}
+            </p>
+            <p className="copy">
+              Discount: ${Number(order.discount || 0).toFixed(2)}
+            </p>
 
             <br />
 
