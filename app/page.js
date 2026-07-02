@@ -1,3 +1,29 @@
-import Link from 'next/link';
-import BrandHeader from '@/components/BrandHeader';
-export default function Home(){return <main className="page"><span className="flower one"/><span className="flower two"/><div className="shell"><BrandHeader/><section className="hero"><h2>Your boutique orders, beautifully organized.</h2><p>Create orders, upload photos, send private customer links, collect payments, and keep every Erendira&apos;s Boutique order in one polished portal.</p><div className="actions"><Link className="btn primary" href="/login">Admin Login</Link></div></section><p className="footer">Customers open their private order link only. No account needed.</p></div></main>}
+import { cookies } from 'next/headers';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import CustomerPortal from '@/components/CustomerPortal';
+
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('sb-access-token')?.value;
+  let user = null;
+  let payments = [];
+
+  if (token) {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase.auth.getUser(token);
+    user = data?.user || null;
+
+    if (user?.email) {
+      const { data: rows = [] } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('customer_email', user.email.toLowerCase())
+        .order('created_at', { ascending: false });
+      payments = rows || [];
+    }
+  }
+
+  return <CustomerPortal initialUser={user} initialPayments={payments} />;
+}
